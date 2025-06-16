@@ -11,14 +11,15 @@ from imblearn.over_sampling import SMOTE
 from xgboost import XGBClassifier
 # === CONFIGURAÇÕES ===
 sr = 22050
-max_por_pasta = 1000
+max_por_pasta = 2000
 
 # === PASTAS COM OS ÁUDIOS ===
 pastas = {
     "quiet": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\quiet", 0),
     "cough": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\cough", 1),
     "breath": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\breathe", 2),
-    "snore": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\snore", 3)
+    "snore": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\snore", 3),
+    "ruido": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\non_wearer", 4)
 }
 # === EXTRAÇÃO DE FEATURES AMPLIADAS ===
 def extrair_features_y(y, sr=22050):
@@ -81,7 +82,7 @@ print("Acurácia média:", scores.mean())
 
 y_pred = cross_val_predict(modelo, X_res, y_res, cv=5)
 print(confusion_matrix(y_res, y_pred))
-print(classification_report(y_res, y_pred, target_names=["Silêncio", "Tosse", "Respiração", "Ronco"]))
+print(classification_report(y_res, y_pred, target_names=["Silêncio", "Tosse", "Respiração", "Ronco", "Ruido"]))
 
 # === SALVANDO MODELO E SCALER ===
 # modelo.fit(X_res, y_res)
