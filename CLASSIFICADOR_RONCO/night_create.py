@@ -8,11 +8,13 @@ from datetime import datetime, timedelta, time
 sr = 24000
 max_por_pasta = 5
 
+CSV_DIR = "./data/csv"
+
 folders = {
-    "quiet": (r"./data/quiet", 0, 100),
-    "cough": (r"./data/cough", 1, max_por_pasta),
-    "breath": (r"./data/breathe", 2, max_por_pasta),
-    "snore": (r"./data/snore", 3, max_por_pasta)
+    "quiet": (r"./data/audio/quiet", 0, 100),
+    "cough": (r"./data/audio/cough", 1, max_por_pasta),
+    "breath": (r"./data/audio/breathe", 2, max_por_pasta),
+    "snore": (r"./data/audio/snore", 3, max_por_pasta)
 }
 
 # print("Iniciando a preparação dos áudios...")
@@ -62,70 +64,67 @@ folders = {
 # colunas = ["file", "duration", "rms", "zcr", "rolloff", "centroid", "bandwidth", "contrast"] + [f"mfcc_{i}" for i in range(13)]
 # df_ambiente = pd.DataFrame(X, columns=colunas)
 
-# df_ambiente.to_csv("dados_treino_teste.csv", index=False)
-# print("✅ Dados salvos em dados_treino_teste.csv")
+# df_ambiente.to_csv(f"{CSV_DIR}/dados_treino_teste.csv", index=False)
+# print(f"✅ Dados salvos em {CSV_DIR}/dados_treino_teste.csv")
 
 ## -- ## -- ## -- ## -- ## -- ## -- ## -- ## -- ## -- ## -- ##
-print("Iniciando a preparação dos dados do ambiente...")
 
+print("Iniciando a preparação dos dados do ambiente...")
 df_ambiente = pd.read_csv("rpi_20_plus.csv")
 df_ambiente['date_time'] = pd.to_datetime(df_ambiente['date_time'])
 
-# Ordena por data
-df_ambiente = df_ambiente.sort_values('date_time').reset_index(drop=True)
+# Criar uma nova coluna com a "data base da noite"
+def get_night_date(dt):
+    if dt.time() < time(12, 0):  # se for de madrugada (antes do meio-dia), considera noite do dia anterior
+        return (dt - timedelta(days=1)).date()
+    else:
+        return dt.date()
 
-# Calcula diferença para definir blocos (gap > 2 min)
-df_ambiente['delta'] = df_ambiente['date_time'].diff()
-df_ambiente['block_id'] = (df_ambiente['delta'] > timedelta(minutes=2)).cumsum()
+df_ambiente['night_date'] = df_ambiente['date_time'].apply(get_night_date)
 
-# Remove coluna auxiliar
-df_ambiente = df_ambiente.drop(columns='delta')
-
-min_duration = timedelta(hours=4)
-
-blocks = []
-
-for block_id, group in df_ambiente.groupby('block_id'):
-    duration = group['date_time'].max() - group['date_time'].min()
-    if duration < min_duration:
-        # Ignora blocos muito curtos
-        continue
-
-    # Gera um horário inicial aleatório noturno entre 18h e 22h
+# Função para aplicar intervalo noturno para cada grupo
+def apply_sleep_filter(group):
+    # Define horário aleatório de dormir e acordar para aquela noite
     start_hour = random.randint(18, 22)
+    end_hour = random.randint(5, 10)
     start_minute = random.randint(0, 59)
-    start_time = time(start_hour, start_minute)
-
-    # Gera um horário final aleatório entre 4h e 10h
-    # Pode ser depois da meia-noite, então lógica circular
-    end_hour = random.randint(4, 10)
     end_minute = random.randint(0, 59)
-    end_time = time(end_hour, end_minute)
 
-    # Função que verifica se um horário está dentro do intervalo noturno desse bloco
-    def is_in_block_night(t, start=start_time, end=end_time):
-        if start <= end:
-            return start <= t <= end
-        else:
-            # intervalo passa da meia-noite
-            return t >= start or t <= end
+    hora_dormir = time(start_hour, start_minute)
+    hora_acordar = time(end_hour, end_minute)
 
-    # Aplica o filtro para manter só as linhas do bloco que estão dentro do intervalo gerado
-    filtered_group = group[group['date_time'].dt.time.apply(is_in_block_night)]
+    # Filtra os dados do grupo conforme o horário definido
+    def is_sleep_time(dt):
+        t = dt.time()
+        return t >= hora_dormir or t <= hora_acordar  # noite cruzando meia-noite
 
-    # Adiciona coluna para indicar qual é a "noite"
-    filtered_group = filtered_group.copy()
-    filtered_group['night_block'] = block_id  # pode usar um contador também se quiser
+    return group[group['date_time'].apply(is_sleep_time)]
 
-    # Guarda o grupo filtrado se não vazio
-    if not filtered_group.empty:
-        blocks.append(filtered_group)
+# Aplica o filtro para cada noite
+# df_ambiente_noite = df_ambiente.groupby('night_date', group_keys=False, include_groups=True).apply(apply_sleep_filter)
+df_ambiente_noite = (
+    df_ambiente
+    .set_index('night_date')
+    .groupby(level=0, group_keys=False)
+    .apply(apply_sleep_filter)
+    .reset_index()
+)
 
-# Concatena todos os blocos filtrados
-result = pd.concat(blocks).sort_values('date_time')
+# Continua o mesmo processo anterior...
+df_ambiente_noite = df_ambiente_noite.sort_values('date_time').reset_index(drop=True)
+df_ambiente_noite['delta'] = df_ambiente_noite['date_time'].diff()
+df_ambiente_noite['block_id'] = (df_ambiente_noite['delta'] > timedelta(minutes=2)).cumsum()
+df_ambiente_noite = df_ambiente_noite.drop(columns='delta')
 
-# Salva o resultado final
-result[["date_time", "humidity", "light", "temperature", "night_block"]].to_csv("dados_ambiente.csv", index=False)
+# Mantém apenas blocos com pelo menos 4 horas de dados
+min_duration = timedelta(hours=4)
+valid_blocks = (
+    df_ambiente_noite.groupby('block_id')
+    .filter(lambda g: g['date_time'].max() - g['date_time'].min() >= min_duration)
+)
 
-print("✅ Dados do ambiente salvos em dados_ambiente.csv")
+valid_blocks_clean = valid_blocks[["night_date", "date_time", "humidity", "light", "temperature"]]
+valid_blocks_clean.to_csv(f"{CSV_DIR}/dados_ambiente.csv", index=False)
+
+print(f"✅ Dados do ambiente salvos em {CSV_DIR}/dados_ambiente.csv")
 print("Preparação concluída com sucesso!")

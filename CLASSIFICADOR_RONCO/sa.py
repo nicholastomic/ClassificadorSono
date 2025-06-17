@@ -16,10 +16,10 @@ max_por_pasta = 1000
 
 # === PASTAS COM OS ÁUDIOS ===
 pastas = {
-    "quiet": (r"./data/quiet", 0),
-    "cough": (r"./data/cough", 1),
-    "breath": (r"./data/breathe", 2),
-    "snore": (r"./data/snore", 3)
+    "quiet": (r"./data/audio/quiet", 0),
+    "cough": (r"./data/audio/cough", 1),
+    "breath": (r"./data/audio/breathe", 2),
+    "snore": (r"./data/audio/snore", 3)
 }
 
 print("Iniciando a análise dos áudios...")
