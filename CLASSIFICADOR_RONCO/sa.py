@@ -3,23 +3,27 @@ import numpy as np
 import librosa
 import random
 import joblib
-import scipy.signal
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score, cross_val_predict
 from sklearn.metrics import classification_report, confusion_matrix
 from imblearn.over_sampling import SMOTE
 from xgboost import XGBClassifier
+
 # === CONFIGURAÇÕES ===
 sr = 22050
 max_por_pasta = 1000
 
 # === PASTAS COM OS ÁUDIOS ===
 pastas = {
-    "quiet": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\quiet", 0),
-    "cough": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\cough", 1),
-    "breath": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\breathe", 2),
-    "snore": (r"C:\Users\Nicholas\OneDrive\Desktop\DATASET DE RUIDO SONO\train\home\v-wangzeyu\skywang\DreamCatcher_cropped\data\train\snore", 3)
+    "quiet": (r"./data/quiet", 0),
+    "cough": (r"./data/cough", 1),
+    "breath": (r"./data/breathe", 2),
+    "snore": (r"./data/snore", 3)
 }
+
+print("Iniciando a análise dos áudios...")
+
 # === EXTRAÇÃO DE FEATURES AMPLIADAS ===
 def extrair_features_y(y, sr=22050):
     if len(y) < 512:
@@ -60,8 +64,6 @@ for classe, (pasta, label) in pastas.items():
 print(f"Total de amostras: {len(dados)}")
 
 # === PRÉ-PROCESSAMENTO + SMOTE ===
-# Utilização de smote (tecnica de criação de dados sinteticos com base em dados reais) na classe "Tosse"
-# para compensar o desbalanceamento de classes
 X = np.array(dados)
 y = np.array(rotulos)
 
@@ -72,10 +74,11 @@ smote = SMOTE(random_state=42)
 X_res, y_res = smote.fit_resample(X_scaled, y)
 print(f"Amostras após SMOTE: {len(y_res)}")
 
-# === TREINAMENTO COM XGBoost (Modelo de IA) ===
+# === TREINAMENTO COM XGBoost ===
 modelo = XGBClassifier(n_estimators=100, random_state=42)
-scores = cross_val_score(modelo, X_res, y_res, cv=5)
 
+# Avaliação com cross-validation
+scores = cross_val_score(modelo, X_res, y_res, cv=5)
 print("\nAcurácias por fold:", scores)
 print("Acurácia média:", scores.mean())
 
@@ -83,8 +86,19 @@ y_pred = cross_val_predict(modelo, X_res, y_res, cv=5)
 print(confusion_matrix(y_res, y_pred))
 print(classification_report(y_res, y_pred, target_names=["Silêncio", "Tosse", "Respiração", "Ronco"]))
 
-# === SALVANDO MODELO E SCALER ===
-# modelo.fit(X_res, y_res)
-# joblib.dump(modelo, "modelo_xgb_tosse.pkl")
-# joblib.dump(scaler, "scaler_xgb.pkl")
-# print("\n✅ Modelo e scaler salvos com sucesso.")
+# Treinar modelo com todos os dados para salvar
+modelo.fit(X_res, y_res)
+
+# === SALVAR MODELO E SCALER ===
+joblib.dump(modelo, "modelo_xgb_tosse.pkl")
+joblib.dump(scaler, "scaler_xgb.pkl")
+print("\n✅ Modelo e scaler salvos com sucesso.")
+
+# === SALVAR DADOS EM CSV ===
+# Cria dataframe com features e rótulo
+colunas = ["rms", "zcr", "rolloff", "centroid", "bandwidth", "contrast"] + [f"mfcc_{i}" for i in range(13)]
+df = pd.DataFrame(X_res, columns=colunas)
+df["sound_type"] = y_res
+
+df.to_csv("dados_treino.csv", index=False)
+print("✅ Dados salvos em dados_treino.csv")
