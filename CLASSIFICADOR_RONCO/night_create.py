@@ -167,7 +167,7 @@ def gerar_df_final(df_audio, df_ambiente, output_path):
             shuffled_index += 1
 
             # Adiciona a duração do áudio atual (garanta que 'duration' esteja em segundos)
-            duration_seconds = shuffled_audio.at[shuffled_index - 1, 'duration']
+            duration_seconds = float(shuffled_audio.at[shuffled_index - 1, 'duration'])
             duration += timedelta(seconds=duration_seconds)
 
     # Remove linhas com date_time/night_data vazio ou NaN
@@ -185,15 +185,15 @@ def gerar_df_final(df_audio, df_ambiente, output_path):
 if __name__ == "__main__":
     os.makedirs(CSV_DIR, exist_ok=True)
 
-    # df_audio = preparar_audios(FOLDERS, f"{CSV_DIR}/dados_treino_teste.csv")
-    # df_ambiente = preparar_dados_ambiente("rpi_20_plus.csv", f"{CSV_DIR}/dados_ambiente.csv")
+    df_audio = preparar_audios(FOLDERS, f"{CSV_DIR}/dados_treino_teste.csv")
+    df_ambiente = preparar_dados_ambiente("rpi_20_plus.csv", f"{CSV_DIR}/dados_ambiente.csv")
 
-    df_audio = pd.read_csv(f"{CSV_DIR}/dados_treino_teste.csv")
-    df_audio = df_audio.dropna().reset_index(drop=True)
-    df_ambiente = pd.read_csv(f"{CSV_DIR}/dados_ambiente.csv")
-    df_ambiente = df_ambiente.dropna().reset_index(drop=True)
-    df_ambiente["date_time"] = pd.to_datetime(df_ambiente["date_time"])
-    # df_final = gerar_df_final(df_audio, df_ambiente, f"{CSV_DIR}/dados_final.csv")
-    df_ambiente = df_ambiente.head(100)
-    df_ambiente.to_csv("dados_ambiente.csv", index=False)
+    # df_audio = pd.read_csv(f"{CSV_DIR}/dados_treino_teste.csv")
+    # df_audio = df_audio.dropna().reset_index(drop=True)
+    # df_ambiente = pd.read_csv(f"{CSV_DIR}/dados_ambiente.csv")
+    # df_ambiente = df_ambiente.dropna().reset_index(drop=True)
+    # df_ambiente["date_time"] = pd.to_datetime(df_ambiente["date_time"])
+    df_final = gerar_df_final(df_audio, df_ambiente, f"{CSV_DIR}/dados_final.csv")
+    # df_ambiente = df_ambiente.head(100)
+    # df_ambiente.to_csv("dados_ambiente.csv", index=False)
     print("✅ Preparação concluída com sucesso!")
