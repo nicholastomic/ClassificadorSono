@@ -179,15 +179,6 @@ def gerar_df_final(df_audio, df_ambiente, output_path):
 
     return shuffled_audio
 
-
-    # shuffled_audio['id'] = 999
-    # print(shuffled_audio.head())
-
-    # df_final = pd.merge(df_audio, df_ambiente, left_on='file', right_on='night_date', how='inner')
-    # df_final.to_csv(output_path, index=False)
-    # print(f"✅ DataFrame final salvo em {output_path}")
-    # return df_final
-
 # === EXECUÇÃO PRINCIPAL ===
 
 if __name__ == "__main__":
@@ -201,6 +192,7 @@ if __name__ == "__main__":
     df_ambiente = pd.read_csv(f"{CSV_DIR}/dados_ambiente.csv")
     df_ambiente = df_ambiente.dropna().reset_index(drop=True)
     df_ambiente["date_time"] = pd.to_datetime(df_ambiente["date_time"])
-    df_final = gerar_df_final(df_audio, df_ambiente, f"{CSV_DIR}/dados_final.csv")
-
+    # df_final = gerar_df_final(df_audio, df_ambiente, f"{CSV_DIR}/dados_final.csv")
+    df_ambiente = df_ambiente.head(100)
+    df_ambiente.to_csv("dados_ambiente.csv", index=False)
     print("✅ Preparação concluída com sucesso!")
