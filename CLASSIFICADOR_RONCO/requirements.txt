@@ -1,0 +1,19 @@
+# Core de computação científica e manipulação de arrays
+numpy==1.26.4
+
+# Análise de áudio
+librosa==0.10.2
+
+# Funções científicas diversas (usado por librosa e outros)
+scipy==1.13.1
+
+# Machine Learning: modelos, pré-processamento e métricas
+scikit-learn==1.5.0
+
+# Para lidar com datasets desbalanceados (SMOTE)
+imbalanced-learn==0.12.3
+
+# Modelo de Gradient Boosting
+xgboost==2.0.3
+
+pandas
